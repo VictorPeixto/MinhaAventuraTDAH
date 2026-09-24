@@ -1,5 +1,5 @@
 'use strict';
-const { redis, safeEqual } = require('./_lib');
+const { redis, safeEqual, clientIp, isLockedOut, registerFail } = require('./_lib');
 
 const TZ = 'America/Sao_Paulo';
 const partsFmt = new Intl.DateTimeFormat('en-CA', {
@@ -26,8 +26,10 @@ module.exports = async (req, res) => {
   res.setHeader('X-Robots-Tag', 'noindex');
   const want = process.env.ANALYTICS_PASSWORD || '';
   if (!want) { res.statusCode = 503; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ error: 'ANALYTICS_PASSWORD não configurada' })); }
+  const ip = clientIp(req);
+  if (await isLockedOut(ip)) { res.statusCode = 429; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ error: 'muitas tentativas' })); }
   const auth = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  if (!safeEqual(auth, want)) { res.statusCode = 401; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ error: 'senha incorreta' })); }
+  if (!safeEqual(auth, want)) { await registerFail(ip); res.statusCode = 401; res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ error: 'senha incorreta' })); }
 
   try {
     const url = new URL(req.url, 'http://x');

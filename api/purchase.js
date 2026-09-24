@@ -7,7 +7,7 @@
  *     e o corpo {"amount": 97, "product": "O Manual do TDAH"}.
  * Nomes, e-mails, CPF e telefones NÃO são guardados.
  */
-const { redis, safeEqual, readBody } = require('./_lib');
+const { redis, safeEqual, readBody, clientIp, isLockedOut, registerFail } = require('./_lib');
 
 const PII_RE = /mail|name|nome|cpf|cnpj|phone|fone|tel|whats|document|address|endere|cep|zip|ip$|senha|password|token/i;
 
@@ -52,7 +52,9 @@ module.exports = async (req, res) => {
     const viaWebhook = wantSecret && safeEqual(secret, wantSecret);
     const viaManual = wantPass && safeEqual(pass, wantPass);
     if (!wantSecret && !wantPass) { res.statusCode = 503; return res.end('configure PURCHASE_WEBHOOK_SECRET'); }
-    if (!viaWebhook && !viaManual) { res.statusCode = 401; return res.end(); }
+    const ip = clientIp(req);
+    if (await isLockedOut(ip)) { res.statusCode = 429; return res.end(); }
+    if (!viaWebhook && !viaManual) { await registerFail(ip); res.statusCode = 401; return res.end(); }
 
     const body = (await readBody(req)) || {};
     const flat = flatten(body);

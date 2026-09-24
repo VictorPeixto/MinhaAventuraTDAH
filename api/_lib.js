@@ -21,6 +21,18 @@ async function redis(commands) {
   });
 }
 
+// Bloqueio de tentativas de senha: 10 erros por IP em 15 minutos.
+const MAX_FAILS = 10;
+async function isLockedOut(ip) {
+  try {
+    const [n] = await redis([['GET', 'fa:' + ip]]);
+    return Number(n || 0) >= MAX_FAILS;
+  } catch (e) { return false; }
+}
+async function registerFail(ip) {
+  try { await redis([['INCR', 'fa:' + ip], ['EXPIRE', 'fa:' + ip, 900]]); } catch (e) { /* ignora */ }
+}
+
 function safeEqual(a, b) {
   const x = Buffer.from(String(a || ''));
   const y = Buffer.from(String(b || ''));
@@ -90,4 +102,4 @@ async function readBody(req) {
   try { return JSON.parse(txt); } catch (e) { return Object.fromEntries(new URLSearchParams(txt)); }
 }
 
-module.exports = { redis, safeEqual, clientIp, geo, BOT_RE, parseUa, hostOf, readBody };
+module.exports = { redis, safeEqual, clientIp, geo, BOT_RE, parseUa, hostOf, readBody, isLockedOut, registerFail };
