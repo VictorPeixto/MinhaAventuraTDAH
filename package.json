@@ -1,0 +1,7 @@
+{
+  "name": "minhaaventuratdah",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Página da MinhaAventuraTDAH com analytics",
+  "engines": { "node": ">=20" }
+}

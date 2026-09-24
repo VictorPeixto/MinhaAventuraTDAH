@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Analytics · MinhaAventuraTDAH</title>
+<style>
+  :root { --bg:#0b1020; --card:#131a30; --card2:#182040; --line:#243055; --tx:#e8ecf8; --mut:#8e9bc0; --acc:#4da3ff; --ok:#3ddc97; --warn:#ffb84d; --bad:#ff6b6b; --pink:#ff7a90; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--tx); font:14px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(11,16,32,.92); backdrop-filter:blur(8px); z-index:5; }
+  h1 { font-size:18px; margin:0; } h1 small { color:var(--mut); font-weight:400; margin-left:8px; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  .ctrl { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  select, input, button { background:var(--card2); color:var(--tx); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; }
+  button { cursor:pointer; } button:hover { border-color:var(--acc); }
+  button.primary { background:var(--acc); border-color:var(--acc); color:#04121f; font-weight:600; }
+  main { max-width:1280px; margin:0 auto; padding:20px; }
+  .grid { display:grid; gap:14px; }
+  .kpis { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+  .cols2 { grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); }
+  .cols3 { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; min-width:0; }
+  .kpi .v { font-size:28px; font-weight:700; letter-spacing:-.5px; } .kpi .l { color:var(--mut); font-size:12px; text-transform:uppercase; letter-spacing:.6px; } .kpi .s { color:var(--mut); font-size:12px; margin-top:2px; }
+  .kpi.money .v { color:var(--ok); } .kpi.buy .v { color:var(--pink); }
+  table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; } th { color:var(--mut); font-weight:500; font-size:12px; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .scroll { overflow:auto; max-height:440px; }
+  .bar { height:8px; background:var(--card2); border-radius:6px; overflow:hidden; min-width:60px; } .bar i { display:block; height:100%; background:var(--acc); }
+  .chart { display:flex; align-items:flex-end; gap:3px; height:150px; padding-top:8px; } .chart .col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:2px; min-width:0; height:100%; }
+  .chart .b { width:100%; display:flex; align-items:flex-end; gap:1px; flex:1; } .chart .b i { flex:1; border-radius:3px 3px 0 0; min-height:1px; } .chart .b .pv { background:var(--acc); } .chart .b .ck { background:var(--pink); }
+  .chart .x { font-size:10px; color:var(--mut); white-space:nowrap; }
+  .legend { display:flex; gap:14px; font-size:12px; color:var(--mut); margin-bottom:4px; } .legend b { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; background:var(--card2); border:1px solid var(--line); }
+  .ok { color:var(--ok); } .bad { color:var(--bad); } .mut { color:var(--mut); }
+  .note { color:var(--mut); font-size:12px; margin:6px 0 0; }
+  #login { position:fixed; inset:0; display:grid; place-items:center; background:var(--bg); z-index:20; } #login form { background:var(--card); border:1px solid var(--line); padding:26px; border-radius:16px; width:min(92vw,360px); display:grid; gap:12px; }
+  #login input { width:100%; } #err { color:var(--bad); min-height:18px; font-size:13px; }
+  .hidden { display:none !important; } code { background:var(--card2); padding:1px 6px; border-radius:5px; font-size:12px; }
+  @media (max-width:640px){ main{padding:12px;} .kpi .v{font-size:22px;} }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <form id="loginForm">
+    <div><h1>Analytics</h1><div class="mut">MinhaAventuraTDAH · área restrita</div></div>
+    <input id="pw" type="password" placeholder="Senha do painel" autocomplete="current-password" autofocus>
+    <div id="err"></div>
+    <button class="primary" type="submit">Entrar</button>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <h1>Analytics <small id="gen">carregando…</small></h1>
+  <div class="ctrl">
+    <select id="range">
+      <option value="1">Hoje</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o período</option>
+    </select>
+    <button id="refresh">Atualizar</button>
+    <button id="csv">Exportar CSV</button>
+    <button id="logout">Sair</button>
+  </div>
+</header>
+
+<main>
+  <div id="warn" class="card hidden" style="margin-bottom:14px;border-color:var(--warn)"></div>
+
+  <div class="grid kpis" id="kpis"></div>
+
+  <div class="grid cols2" style="margin-top:14px">
+    <div class="card"><h2>Visitas e cliques por dia</h2><div class="legend"><span><b style="background:var(--acc)"></b>Visitas</span><span><b style="background:var(--pink)"></b>Cliques</span></div><div class="chart" id="cDaily"></div></div>
+    <div class="card"><h2>Horário de maior movimento <span class="mut" style="font-weight:400">(horário de Brasília)</span></h2><div class="legend"><span><b style="background:var(--acc)"></b>Visitas</span><span><b style="background:var(--pink)"></b>Cliques</span></div><div class="chart" id="cHourly"></div></div>
+  </div>
+
+  <div class="grid cols2" style="margin-top:14px">
+    <div class="card"><h2>Onde as pessoas clicaram</h2><div class="scroll" id="tClicks"></div></div>
+    <div class="card"><h2>Dia da semana</h2><div class="chart" id="cWeek"></div><div id="tBuyProd" style="margin-top:14px"></div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px"><h2>IPs com mais cliques</h2><div class="scroll" id="tIps"></div><p class="note">Vários dispositivos podem compartilhar o mesmo IP (rede, operadora). A cidade é aproximada pelo IP.</p></div>
+
+  <div class="grid cols3" style="margin-top:14px">
+    <div class="card"><h2>Cidades · cliques</h2><div id="tCityCk"></div></div>
+    <div class="card"><h2>Cidades · visitas</h2><div id="tCityVis"></div></div>
+    <div class="card"><h2>Países · cliques</h2><div id="tCountry"></div></div>
+  </div>
+
+  <div class="grid cols3" style="margin-top:14px">
+    <div class="card"><h2>Dispositivo</h2><div id="tDev"></div></div>
+    <div class="card"><h2>Navegador</h2><div id="tBr"></div></div>
+    <div class="card"><h2>Sistema</h2><div id="tOs"></div></div>
+  </div>
+
+  <div class="grid cols2" style="margin-top:14px">
+    <div class="card"><h2>De onde vieram</h2><div id="tRef"></div><h2 style="margin-top:16px">Campanhas (UTM)</h2><div id="tUtm"></div></div>
+    <div class="card"><h2>Compras</h2><div class="scroll" id="tBuy"></div>
+      <form id="manual" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <input id="mAmt" placeholder="Valor (ex.: 47,90)" inputmode="decimal" style="width:150px">
+        <input id="mProd" placeholder="Produto" value="O Manual do TDAH" style="flex:1;min-width:140px">
+        <button class="primary" type="submit">Registrar compra manual</button>
+      </form>
+      <p class="note" id="mMsg"></p>
+      <p class="note">As compras chegam sozinhas quando o checkout avisa o site (webhook). Enquanto isso, você pode registrar manualmente.</p>
+      <div id="wh"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px"><h2>Atividade recente</h2><div class="scroll" id="tRecent"></div></div>
+  <p class="note" id="foot"></p>
+</main>
+</div>
+
+<script>
+(function () {
+  var PW_KEY = 'mat_an_pw', pw = '', timer = null, lastData = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var nf = new Intl.NumberFormat('pt-BR');
+  var brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  var WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  var NAMES = {
+    'comprar:manual': 'Comprar · O Manual do TDAH', 'embreve:colecao': 'Em breve · Coleção Domínio do TDAH',
+    'embreve:suplementos': 'Em breve · Sistema de Suplementos', 'embreve:casais': 'Em breve · Manual do TDAH para Casais',
+    'embreve:planejador': 'Em breve · Planejador do Recomeço', 'embreve:diagnostico': 'Em breve · Será que eu tenho TDAH?',
+    'embreve:vantagem': 'Em breve · A Vantagem do TDAH', 'social:tiktok': 'Ícone do TikTok', 'social:instagram': 'Ícone do Instagram', 'social:email': 'Ícone de e-mail'
+  };
+  var name = function (l) { return NAMES[l] || (l.indexOf('outro:') === 0 ? 'Outro clique (' + l.slice(6) + ')' : l); };
+  var dev = { celular: 'Celular', desktop: 'Computador', tablet: 'Tablet' };
+
+  function showLogin(msg) { $('login').classList.remove('hidden'); $('app').classList.add('hidden'); $('err').textContent = msg || ''; clearInterval(timer); }
+  function showApp() { $('login').classList.add('hidden'); $('app').classList.remove('hidden'); }
+
+  function api() {
+    return fetch('/api/stats?range=' + encodeURIComponent($('range').value), { headers: { Authorization: 'Bearer ' + pw }, cache: 'no-store' }).then(function (r) {
+      if (r.status === 401) { sessionStorage.removeItem(PW_KEY); showLogin('Senha incorreta.'); throw new Error('auth'); }
+      return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'erro'); return j; });
+    });
+  }
+
+  function kpi(l, v, s, cls) { return '<div class="card kpi ' + (cls || '') + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + (s || '&nbsp;') + '</div></div>'; }
+  function table(head, rows, right) {
+    if (!rows.length) return '<p class="mut">Sem dados ainda.</p>';
+    return '<table><thead><tr>' + head.map(function (h, i) { return '<th class="' + (right && right.indexOf(i) > -1 ? 'n' : '') + '">' + h + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return '<td class="' + (right && right.indexOf(i) > -1 ? 'n' : '') + '">' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+  }
+  function rank(pairs, fmt) {
+    if (!pairs.length) return '<p class="mut">Sem dados ainda.</p>';
+    var max = Math.max.apply(null, pairs.map(function (p) { return p[1]; })) || 1;
+    return '<table><tbody>' + pairs.map(function (p) { return '<tr><td style="width:55%">' + esc(fmt ? fmt(p[0]) : p[0]) + '</td><td><div class="bar"><i style="width:' + (p[1] / max * 100) + '%"></i></div></td><td class="n">' + nf.format(p[1]) + '</td></tr>'; }).join('') + '</tbody></table>';
+  }
+  function chart(items, labelFn, every) {
+    var max = Math.max.apply(null, items.map(function (i) { return Math.max(i.pv, i.ck); })) || 1;
+    return items.map(function (it, idx) {
+      return '<div class="col" title="' + esc(labelFn(it, idx)) + ' · ' + it.pv + ' visitas · ' + it.ck + ' cliques"><div class="b"><i class="pv" style="height:' + (it.pv / max * 100) + '%"></i><i class="ck" style="height:' + (it.ck / max * 100) + '%"></i></div><div class="x">' + (idx % every === 0 ? esc(labelFn(it, idx)) : '&nbsp;') + '</div></div>';
+    }).join('');
+  }
+  function dur(s) { return s >= 60 ? Math.floor(s / 60) + 'min ' + (s % 60) + 's' : s + 's'; }
+
+  function render(d) {
+    lastData = d; var t = d.totals;
+    $('gen').textContent = 'atualizado em ' + d.generatedAt + ' (Brasília)';
+    var warn = [];
+    if (d.capped) warn.push('O banco guarda os 30.000 eventos mais recentes; períodos longos podem estar incompletos (desde ' + d.dataFrom + ').');
+    $('warn').classList.toggle('hidden', !warn.length); $('warn').innerHTML = warn.join('<br>');
+    $('kpis').innerHTML =
+      kpi('Visitantes únicos', nf.format(t.visitors), 'sessões: ' + nf.format(t.sessions)) +
+      kpi('Visualizações', nf.format(t.pageviews), 'total histórico: ' + nf.format(t.allTime.pageviews)) +
+      kpi('Cliques', nf.format(t.clicks), nf.format(t.clickers) + ' pessoas clicaram (' + t.ctr + '%)') +
+      kpi('Cliques em Comprar', nf.format(t.buyClicks), nf.format(t.buyClickers) + ' pessoas (' + t.buyCtr + '%)', 'buy') +
+      kpi('Compras', nf.format(t.purchases), 'conversão: ' + t.conversion + '% dos visitantes', 'buy') +
+      kpi('Faturamento', brl.format(t.revenue), t.checkoutConversion + '% de quem clicou em Comprar', 'money') +
+      kpi('Tempo médio na página', dur(t.avgSeconds), 'rolagem média: ' + t.avgScroll + '%') +
+      kpi('Visitantes (histórico)', nf.format(t.allTime.visitors), 'únicos desde o início');
+
+    var dl = d.daily, every = dl.length > 20 ? Math.ceil(dl.length / 12) : 1;
+    $('cDaily').innerHTML = chart(dl, function (x) { return x.day.slice(8, 10) + '/' + x.day.slice(5, 7); }, every);
+    $('cHourly').innerHTML = chart(d.hourly, function (x) { return x.hour + 'h'; }, 2);
+    $('cWeek').innerHTML = chart(d.weekday, function (x) { return WD[x.wd]; }, 1);
+
+    var maxC = Math.max.apply(null, d.clicksByLabel.map(function (c) { return c.clicks; })) || 1;
+    $('tClicks').innerHTML = table(['Botão / área', 'Cliques', 'Pessoas', ''], d.clicksByLabel.map(function (c) { return [esc(name(c.label)), nf.format(c.clicks), nf.format(c.people), '<div class="bar"><i style="width:' + (c.clicks / maxC * 100) + '%"></i></div>']; }), [1, 2]);
+    $('tBuyProd').innerHTML = d.purchasesByProduct.length ? '<h2>Compras por produto</h2>' + rank(d.purchasesByProduct) : '';
+
+    $('tIps').innerHTML = table(['IP', 'Local (aprox.)', 'Cliques', 'Visitas', 'Pessoas', 'Clicou mais em', 'Primeiro acesso', 'Último acesso'],
+      d.topIps.map(function (r) { return ['<code>' + esc(r.ip) + '</code>', esc(r.place), '<b>' + nf.format(r.clicks) + '</b>', nf.format(r.visits), nf.format(r.people), esc(r.topClick ? name(r.topClick) : '—'), esc(r.first), esc(r.last)]; }), [2, 3, 4]);
+
+    $('tCityCk').innerHTML = rank(d.cities.clicks); $('tCityVis').innerHTML = rank(d.cities.visits); $('tCountry').innerHTML = rank(d.countries);
+    $('tDev').innerHTML = rank(d.devices, function (k) { return dev[k] || k; }); $('tBr').innerHTML = rank(d.browsers); $('tOs').innerHTML = rank(d.os);
+    $('tRef').innerHTML = rank(d.referrers); $('tUtm').innerHTML = rank(d.utm);
+
+    $('tBuy').innerHTML = table(['Quando', 'Produto', 'Valor', 'Situação', 'Origem'],
+      d.purchasesList.map(function (p) { return [esc(p.when), esc(p.product || '—'), p.amount ? brl.format(p.amount) : '—', p.refund ? '<span class="bad">reembolso</span>' : p.counted ? '<span class="ok">contada</span>' : '<span class="mut">' + esc(p.status || 'não paga') + '</span>', esc(p.src)]; }), [2]);
+    $('wh').innerHTML = d.lastWebhook ? '<details><summary class="mut">Último aviso recebido do checkout (sem dados pessoais)</summary><pre style="white-space:pre-wrap;font-size:11px;color:var(--mut)">' + esc(JSON.stringify(d.lastWebhook, null, 1)) + '</pre></details>' : '';
+
+    $('tRecent').innerHTML = table(['Horário', 'Tipo', 'Onde', 'IP', 'Local', 'Aparelho', 'Origem'],
+      d.recent.map(function (e) { return [esc(e.when), e.kind === 'clique' ? '<span class="pill" style="color:var(--pink)">clique</span>' : '<span class="pill">visita</span>', esc(e.label ? name(e.label) : '—'), '<code>' + esc(e.ip) + '</code>', esc(e.place), esc((dev[e.device] || e.device) + ' · ' + e.browser), esc(e.ref || 'direto')]; }));
+    $('foot').textContent = 'Fuso: ' + d.tz + ' · eventos no período: ' + nf.format(d.eventsInWindow) + ' · bots conhecidos são ignorados.';
+  }
+
+  function load() { return api().then(render).catch(function (e) { if (e.message !== 'auth') { $('gen').textContent = 'erro: ' + e.message; } }); }
+  function start() { showApp(); load(); clearInterval(timer); timer = setInterval(load, 30000); }
+
+  $('loginForm').addEventListener('submit', function (ev) { ev.preventDefault(); pw = $('pw').value; if (!pw) return; sessionStorage.setItem(PW_KEY, pw); $('err').textContent = ''; start(); });
+  $('range').addEventListener('change', load); $('refresh').addEventListener('click', load);
+  $('logout').addEventListener('click', function () { sessionStorage.removeItem(PW_KEY); pw = ''; $('pw').value = ''; showLogin(''); });
+  $('csv').addEventListener('click', function () {
+    if (!lastData) return;
+    var rows = [['horario', 'tipo', 'onde', 'ip', 'local', 'aparelho', 'navegador', 'sistema', 'origem']].concat(lastData.recent.map(function (e) { return [e.when, e.kind, e.label, e.ip, e.place, e.device, e.browser, e.os, e.ref]; }));
+    var csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })); a.download = 'atividade-recente.csv'; a.click();
+  });
+  $('manual').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    fetch('/api/purchase', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-analytics-password': pw }, body: JSON.stringify({ amount: $('mAmt').value, product: $('mProd').value }) })
+      .then(function (r) { $('mMsg').textContent = r.ok ? 'Compra registrada.' : 'Não foi possível registrar (' + r.status + ').'; if (r.ok) { $('mAmt').value = ''; load(); } });
+  });
+
+  pw = sessionStorage.getItem(PW_KEY) || '';
+  if (pw) start(); else showLogin('');
+})();
+</script>
+</body>
+</html>
