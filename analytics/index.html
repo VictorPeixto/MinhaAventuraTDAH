@@ -136,6 +136,7 @@
   function api() {
     return fetch('/api/stats?range=' + encodeURIComponent($('range').value), { headers: { Authorization: 'Bearer ' + pw }, cache: 'no-store' }).then(function (r) {
       if (r.status === 401) { sessionStorage.removeItem(PW_KEY); showLogin('Senha incorreta.'); throw new Error('auth'); }
+      if (r.status === 429) { sessionStorage.removeItem(PW_KEY); showLogin('Muitas tentativas. Tente de novo em 15 minutos.'); throw new Error('auth'); }
       return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'erro'); return j; });
     });
   }
