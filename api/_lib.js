@@ -102,4 +102,13 @@ async function readBody(req) {
   try { return JSON.parse(txt); } catch (e) { return Object.fromEntries(new URLSearchParams(txt)); }
 }
 
-module.exports = { redis, safeEqual, clientIp, geo, BOT_RE, parseUa, hostOf, readBody, isLockedOut, registerFail };
+// Idioma da página: /en, /es ou (padrão) português.
+function langOf(p) {
+  p = String(p || '');
+  if (/^\/en(\/|$)/.test(p)) return 'en';
+  if (/^\/es(\/|$)/.test(p)) return 'es';
+  return 'pt';
+}
+const sfx = (l) => (l === 'en' || l === 'es' ? ':' + l : '');
+
+module.exports = { langOf, sfx, redis, safeEqual, clientIp, geo, BOT_RE, parseUa, hostOf, readBody, isLockedOut, registerFail };

@@ -1,5 +1,5 @@
 'use strict';
-const { redis, clientIp, geo, BOT_RE, parseUa, hostOf, readBody } = require('./_lib');
+const { langOf, sfx, redis, clientIp, geo, BOT_RE, parseUa, hostOf, readBody } = require('./_lib');
 
 const MAX_EVENTS = 30000;
 const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -40,8 +40,9 @@ module.exports = async (req, res) => {
     }
 
     const cmds = [['LPUSH', 'ev', JSON.stringify(ev)], ['LTRIM', 'ev', 0, MAX_EVENTS - 1]];
-    if (kind === 'pv') { cmds.push(['INCR', 'c:pv'], ['PFADD', 'hll:v', ev.v]); }
-    if (kind === 'ck') { cmds.push(['INCR', 'c:ck']); }
+    const S = sfx(langOf(ev.pa));
+    if (kind === 'pv') { cmds.push(['INCR', 'c:pv' + S], ['PFADD', 'hll:v' + S, ev.v]); }
+    if (kind === 'ck') { cmds.push(['INCR', 'c:ck' + S]); }
     await redis(cmds);
 
     res.statusCode = 204;

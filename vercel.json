@@ -1,11 +1,13 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/analytics", "destination": "/analytics/index.html" }
+    { "source": "/analytics", "destination": "/analytics/index.html" },
+    { "source": "/en/analytics", "destination": "/analytics/index.html" },
+    { "source": "/es/analytics", "destination": "/analytics/index.html" }
   ],
   "headers": [
     {
-      "source": "/analytics(.*)",
+      "source": "/(en/|es/)?analytics(.*)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
         { "key": "Cache-Control", "value": "no-store" }

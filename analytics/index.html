@@ -45,7 +45,7 @@
 
 <div id="login">
   <form id="loginForm">
-    <div><h1>Analytics</h1><div class="mut">MinhaAventuraTDAH · área restrita</div></div>
+    <div><h1>Analytics</h1><div class="mut">MinhaAventuraTDAH · <span class="langname"></span> · área restrita</div></div>
     <input id="pw" type="password" placeholder="Senha do painel" autocomplete="current-password" autofocus>
     <div id="err"></div>
     <button class="primary" type="submit">Entrar</button>
@@ -54,7 +54,7 @@
 
 <div id="app" class="hidden">
 <header>
-  <h1>Analytics <small id="gen">carregando…</small></h1>
+  <h1>Analytics <span class="langname"></span> <small id="gen">carregando…</small></h1>
   <div class="ctrl">
     <select id="range">
       <option value="1">Hoje</option><option value="7" selected>Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o período</option>
@@ -114,6 +114,9 @@
 </div>
 
 <script>
+var LANG = /^\/en(\/|$)/.test(location.pathname) ? 'en' : /^\/es(\/|$)/.test(location.pathname) ? 'es' : 'pt';
+(function () { var n = { pt: '🇧🇷 Português', en: '🇺🇸 English', es: '🇪🇸 Español' }[LANG]; document.title = 'Analytics ' + n.split(' ')[1] + ' · MinhaAventuraTDAH';
+  document.addEventListener('DOMContentLoaded', function () { [].forEach.call(document.querySelectorAll('.langname'), function (x) { x.textContent = '· ' + n; }); }); })();
 (function () {
   var PW_KEY = 'mat_an_pw', pw = '', timer = null, lastData = null;
   var $ = function (id) { return document.getElementById(id); };
@@ -134,7 +137,7 @@
   function showApp() { $('login').classList.add('hidden'); $('app').classList.remove('hidden'); }
 
   function api() {
-    return fetch('/api/stats?range=' + encodeURIComponent($('range').value), { headers: { Authorization: 'Bearer ' + pw }, cache: 'no-store' }).then(function (r) {
+    return fetch('/api/stats?lang=' + LANG + '&range=' + encodeURIComponent($('range').value), { headers: { Authorization: 'Bearer ' + pw }, cache: 'no-store' }).then(function (r) {
       if (r.status === 401) { sessionStorage.removeItem(PW_KEY); showLogin('Senha incorreta.'); throw new Error('auth'); }
       if (r.status === 429) { sessionStorage.removeItem(PW_KEY); showLogin('Muitas tentativas. Tente de novo em 15 minutos.'); throw new Error('auth'); }
       return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'erro'); return j; });
@@ -214,7 +217,7 @@
   });
   $('manual').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    fetch('/api/purchase', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-analytics-password': pw }, body: JSON.stringify({ amount: $('mAmt').value, product: $('mProd').value }) })
+    fetch('/api/purchase', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-analytics-password': pw }, body: JSON.stringify({ lang: LANG, amount: $('mAmt').value, product: $('mProd').value }) })
       .then(function (r) { $('mMsg').textContent = r.ok ? 'Compra registrada.' : 'Não foi possível registrar (' + r.status + ').'; if (r.ok) { $('mAmt').value = ''; load(); } });
   });
 

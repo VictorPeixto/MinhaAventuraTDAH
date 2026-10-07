@@ -1,5 +1,5 @@
 'use strict';
-const { redis, safeEqual, clientIp, isLockedOut, registerFail } = require('./_lib');
+const { langOf, sfx, redis, safeEqual, clientIp, isLockedOut, registerFail } = require('./_lib');
 
 const TZ = 'America/Sao_Paulo';
 const partsFmt = new Intl.DateTimeFormat('en-CA', {
@@ -33,6 +33,8 @@ module.exports = async (req, res) => {
 
   try {
     const url = new URL(req.url, 'http://x');
+    const lang = ['en', 'es'].includes(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'pt';
+    const S = sfx(lang);
     const range = url.searchParams.get('range') || '7';
     const days = range === 'all' ? 0 : Math.max(1, Math.min(365, parseInt(range, 10) || 7));
     const now = Date.now();
@@ -40,10 +42,10 @@ module.exports = async (req, res) => {
     const since = days ? new Date(startDay + 'T00:00:00-03:00').getTime() : 0;
 
     const [rawEv, rawPu, cpv, cck, uniqAll, last] = await redis([
-      ['LRANGE', 'ev', 0, 29999], ['LRANGE', 'pu', 0, 4999], ['GET', 'c:pv'], ['GET', 'c:ck'], ['PFCOUNT', 'hll:v'], ['GET', 'pu:last'],
+      ['LRANGE', 'ev', 0, 29999], ['LRANGE', 'pu', 0, 4999], ['GET', 'c:pv' + S], ['GET', 'c:ck' + S], ['PFCOUNT', 'hll:v' + S], ['GET', 'pu:last' + S],
     ]);
     const parse = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
-    const events = (rawEv || []).map(parse).filter(Boolean).filter((e) => e.t >= since); // mais recentes primeiro
+    const events = (rawEv || []).map(parse).filter(Boolean).filter((e) => e.t >= since && langOf(e.pa) === lang); // mais recentes primeiro
     const oldest = events.length ? events[events.length - 1].t : now;
 
     const visitors = new Set(), sessions = new Set(), clickers = new Set(), buyClickers = new Set();
@@ -94,7 +96,7 @@ module.exports = async (req, res) => {
     const seen = new Map();
     for (const raw of rawPu || []) {
       const p = parse(raw);
-      if (!p || p.t < since) continue;
+      if (!p || p.t < since || (p.lang || 'pt') !== lang) continue;
       if (!seen.has(p.id)) seen.set(p.id, p);
     }
     const purchases = [...seen.values()].sort((a, b) => b.t - a.t);
@@ -119,7 +121,7 @@ module.exports = async (req, res) => {
 
     const nVis = visitors.size;
     const out = {
-      generatedAt: local(now).text, tz: TZ, range: days ? String(days) : 'all',
+      lang, generatedAt: local(now).text, tz: TZ, range: days ? String(days) : 'all',
       dataFrom: local(oldest).text, eventsInWindow: events.length, capped: (rawEv || []).length >= 30000,
       totals: {
         visitors: nVis, sessions: sessions.size, pageviews, clicks, clickers: clickers.size,

@@ -57,6 +57,8 @@ module.exports = async (req, res) => {
     if (!viaWebhook && !viaManual) { await registerFail(ip); res.statusCode = 401; return res.end(); }
 
     const body = (await readBody(req)) || {};
+    const lq = String(url.searchParams.get('lang') || body.lang || '').toLowerCase();
+    const lang = lq === 'en' || lq === 'es' ? lq : 'pt';
     const flat = flatten(body);
     const now = Date.now();
 
@@ -64,7 +66,7 @@ module.exports = async (req, res) => {
     if (viaManual && !viaWebhook) {
       const amt = toNumber(body.amount);
       rec = { t: now, id: 'manual-' + now + '-' + Math.random().toString(36).slice(2, 7), st: 'manual', ok: true,
-        amt, cur: 'BRL', prod: String(body.product || 'O Manual do TDAH').slice(0, 80), meth: 'manual', src: 'manual' };
+        amt, cur: 'BRL', prod: String(body.product || 'O Manual do TDAH').slice(0, 80), meth: 'manual', src: 'manual', lang };
     } else {
       const status = String(pick(flat, ['status', 'payment_status', 'transaction_status', 'event', 'situation', 'state', 'type']) || '');
       const id = String(pick(flat, ['transaction_id', 'transaction', 'order_id', 'sale_id', 'purchase_id', 'id', 'code', 'hash', 'checkout_id']) || 'wh-' + now);
@@ -76,12 +78,12 @@ module.exports = async (req, res) => {
         cur: String(pick(flat, ['currency', 'moeda']) || 'BRL').slice(0, 5).toUpperCase(),
         prod: String(pick(flat, ['product_name', 'product', 'offer_name', 'offer', 'item_name', 'title', 'produto']) || '').slice(0, 80),
         meth: String(pick(flat, ['payment_method', 'method', 'payment_type', 'forma_pagamento']) || '').slice(0, 30).toLowerCase(),
-        src: 'webhook',
+        src: 'webhook', lang,
       };
       // guarda um exemplo do último webhook (sem dados pessoais) para você conferir os campos
       const sample = {};
       for (const [k, v] of flat.slice(0, 60)) if (!PII_RE.test(k)) sample[k] = String(v).slice(0, 60);
-      await redis([['SET', 'pu:last', JSON.stringify({ t: now, campos: sample })]]);
+      await redis([['SET', 'pu:last' + (lang === 'pt' ? '' : ':' + lang), JSON.stringify({ t: now, campos: sample })]]);
     }
 
     await redis([['LPUSH', 'pu', JSON.stringify(rec)], ['LTRIM', 'pu', 0, 4999]]);
